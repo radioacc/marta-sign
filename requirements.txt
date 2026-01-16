@@ -1,0 +1,16 @@
+Library List
+Here is the breakdown of what each library is used for:
+
+flask: The web framework used to run the application server and render the HTML templates.
+
+requests: Used to fetch the real-time train data from the MARTA API.
+
+waitress: The production-grade WSGI server recommended for running the app on Windows (replaces Gunicorn).
+
+gunicorn: A production-grade WSGI server for Linux/macOS (optional if you are only running on Windows).
+
+sqlite3: Built-in Python library (no install needed) used for the schedule backup database.
+
+json: Built-in Python library (no install needed) for parsing API data.
+
+os & datetime: Built-in Python libraries for system operations and time calculations.
