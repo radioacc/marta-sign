@@ -1,6 +1,3 @@
-Library List
-Here is the breakdown of what each library is used for:
-
 flask: The web framework used to run the application server and render the HTML templates.
 
 requests: Used to fetch the real-time train data from the MARTA API.
