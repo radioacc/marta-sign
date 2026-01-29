@@ -369,7 +369,7 @@
             const visibleTrains = trainData.filter(t => activeFilter === "ALL" || t.destination === activeFilter);
 
             if (visibleTrains.length === 0) {
-                container.innerHTML = `<div style="text-align:center; padding: 50px; opacity:0.5; font-size: 1.5rem;">No trains found.</div>`;
+                container.innerHTML = `<div style="text-align:center; padding: 50px; opacity:0.5; font-size: 1.5rem;">Loading, or no trains currently found.</div>`;
                 return;
             }
 
@@ -449,4 +449,5 @@
         window.onclick = function(e) { if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('active'); }
     </script>
 </body>
+
 </html>
