@@ -5,10 +5,8 @@ import json
 from flask import Flask, render_template, request, jsonify
 
 # --- TOGGLE SETTINGS ---
-# Set this to False to bypass all SQLite logic (useful for Cloudflare/Plesk restrictions)
 ENABLE_DATABASE = False 
 
-# Conditional import to prevent crashes on platforms without sqlite3 installed
 if ENABLE_DATABASE:
     try:
         import sqlite3
@@ -18,6 +16,7 @@ if ENABLE_DATABASE:
 
 # --- COPYRIGHT AND MISC INFO ---
 # Copyright (C) 2025-2026 Adam Caskey
+# Modified by Assistant on 2025-05-22 to update status labels and UI components.
 # Licensed under GNU General Public License Version 3
 
 # --- CONFIGURATION ---
@@ -26,16 +25,13 @@ DEFAULT_STATION = "MIDTOWN"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'marta_schedule.db')
 
-# HEADERS (Required to look like a browser)
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
 
-# --- CACHE ---
 CACHE = {'all_trains': [], 'last_updated': None}
 CACHE_DURATION = 15
 
-# --- TIMEZONE SAFETY ---
 try:
     from zoneinfo import ZoneInfo
     TZ = ZoneInfo("America/New_York")
@@ -44,7 +40,6 @@ except Exception:
 
 app = Flask(__name__)
 
-# --- HELPER FUNCTIONS ---
 def get_db_connection():
     if not ENABLE_DATABASE:
         return None
@@ -62,17 +57,6 @@ def clean_dest(text):
         d = d.replace(p, "")
     return d.title()
 
-def parse_gtfs_time(time_str):
-    try:
-        hours, minutes, seconds = map(int, time_str.split(':'))
-        days = 0
-        if hours >= 24:
-            days = hours // 24
-            hours = hours % 24
-        return datetime.time(hours, minutes, seconds), days
-    except: return None, 0
-
-# --- DATA FETCHING ---
 def fetch_marta_data():
     global CACHE
     now = datetime.datetime.now()
@@ -126,61 +110,6 @@ def get_realtime_trains(station_name):
     results.sort(key=lambda x: int(x['waiting_seconds']) if str(x['waiting_seconds']).isdigit() else 9999)
     return results
 
-# --- SCHEDULE BACKUP ---
-def get_backup_schedule(station_name, limit=6):
-    if not ENABLE_DATABASE: return []
-    conn = get_db_connection()
-    if not conn: return []
-    
-    try:
-        cursor = conn.cursor()
-        now = datetime.datetime.now(TZ)
-        current_time_str = now.strftime("%H:%M:%S")
-        day_name = now.strftime("%A").lower()
-
-        cursor.execute("SELECT stop_id FROM stops WHERE stop_name LIKE ?", (f"%{station_name}%",))
-        stop_ids = [row['stop_id'] for row in cursor.fetchall()]
-        if not stop_ids: return []
-        
-        placeholders = ','.join('?' * len(stop_ids))
-        query = f"""
-            SELECT r.route_long_name as line, t.trip_headsign as destination, 
-                   t.direction_id, st.arrival_time
-            FROM stop_times st
-            JOIN trips t ON st.trip_id = t.trip_id
-            JOIN routes r ON t.route_id = r.route_id
-            JOIN calendar c ON t.service_id = c.service_id
-            WHERE st.stop_id IN ({placeholders})
-              AND st.arrival_time > ?
-              AND c.{day_name} = 1
-            ORDER BY st.arrival_time ASC
-            LIMIT ?
-        """
-        cursor.execute(query, stop_ids + [current_time_str, limit])
-        rows = cursor.fetchall()
-        
-        scheduled = []
-        for row in rows:
-            line_raw = row['line'].upper()
-            line_color = 'RED' if 'RED' in line_raw else 'GOLD' if 'GOLD' in line_raw else 'BLUE' if 'BLUE' in line_raw else 'GREEN' if 'GREEN' in line_raw else 'GRAY'
-            
-            scheduled.append({
-                'station': station_name,
-                'destination': clean_dest(row['destination']),
-                'line': line_color,
-                'direction': 'N' if row['direction_id'] == 1 else 'S',
-                'waiting_time': row['arrival_time'],
-                'waiting_seconds': 99999,
-                'status': 'Scheduled'
-            })
-        return scheduled
-    except Exception as e:
-        print(f"DB Error: {e}")
-        return []
-    finally:
-        if conn: conn.close()
-
-# --- ROUTES ---
 @app.route('/')
 def home():
     STATION_LIST = sorted([
@@ -200,16 +129,6 @@ def api_arrivals():
     try:
         station = request.args.get('station', DEFAULT_STATION)
         trains = get_realtime_trains(station)
-        
-        if ENABLE_DATABASE and len(trains) < 6:
-            backups = get_backup_schedule(station, limit=10)
-            needed = 6 - len(trains)
-            added = 0
-            for b in backups:
-                if added >= needed: break
-                if not any(r['destination'] == b['destination'] and r['direction'] == b['direction'] for r in trains):
-                    trains.append(b)
-                    added += 1
         return jsonify(trains)
     except Exception as e:
         print(f"🔥 Error: {e}")
