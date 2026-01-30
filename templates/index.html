@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MARTA Trains</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/MARTA-logo.png') }}">
     <style>
         /* --- RESET & BASICS --- */
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -30,13 +31,15 @@
         body.dark-mode .list-item { color: #eee; border-bottom: 1px solid #444; }
         body.dark-mode .list-item:hover { background-color: #333; }
         
-        /* Dark Mode Toggle Icon */
+        /* New Sun/Moon Toggle Styles */
         #theme-toggle {
-            position: fixed; bottom: 15px; right: 15px; width: 24px; height: 24px;
-            opacity: 0.2; cursor: pointer; z-index: 200;
-            transition: opacity 0.3s; filter: grayscale(100%);
+            position: fixed; bottom: 15px; right: 15px; width: 40px; height: 40px;
+            cursor: pointer; z-index: 200; display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.1); border-radius: 50%; transition: background 0.3s;
         }
-        #theme-toggle:hover { opacity: 0.8; }
+        #theme-toggle:hover { background: rgba(0,0,0,0.2); }
+        body.dark-mode #theme-toggle { background: rgba(255,255,255,0.1); }
+        body.dark-mode #theme-toggle:hover { background: rgba(255,255,255,0.2); }
 
         /* --- HEADER --- */
         header { 
@@ -57,14 +60,12 @@
 
         .controls { display: flex; gap: 10px; width: 100px; justify-content: flex-end; align-items: center; }
 
-        /* --- BUTTONS --- */
         button.nav-btn {
             background-color: #333; color: white; border: 1px solid #555;
             padding: 8px 12px; border-radius: 4px; font-size: 0.9rem;
             font-weight: 600; cursor: pointer; transition: background 0.2s;
         }
         button.nav-btn:hover { background-color: #555; }
-        button.nav-btn:active { background-color: #777; }
 
         /* --- MAIN LIST --- */
         main { flex-grow: 1; overflow-y: auto; padding: 20px; -webkit-overflow-scrolling: touch; }
@@ -78,7 +79,6 @@
             width: 60px; height: 60px; border-radius: 50%; display: flex; 
             justify-content: center; align-items: center; font-size: 2rem; 
             font-weight: bold; color: white; margin-right: 20px; flex-shrink: 0; 
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2); 
         }
         .line-bubble.RED { background-color: #ED1C24; }
         .line-bubble.GOLD { background-color: #FFA500; }
@@ -99,19 +99,6 @@
         .minutes-main { font-size: 2.8rem; font-weight: 700; line-height: 1; }
         .minutes-sub { font-size: 0.9rem; color: #666; margin-top: 4px; text-transform: uppercase; }
 
-        .status-sched .destination, .status-sched .minutes-main { opacity: 0.6; }
-        .status-sched .line-bubble { opacity: 0.6; }
-
-        /* --- TOAST NOTIFICATION --- */
-        #toast {
-            visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center;
-            border-radius: 4px; padding: 16px; position: fixed; z-index: 300; left: 50%; bottom: 30px;
-            transform: translateX(-50%); font-size: 1rem; border: 1px solid #555;
-        }
-        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-
         /* --- MODALS --- */
         .modal-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -122,47 +109,27 @@
         .modal-content {
             background: white; width: 90%; max-width: 450px; max-height: 80vh;
             border-radius: 8px; display: flex; flex-direction: column;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); color: black;
         }
         .modal-header {
             padding: 20px; border-bottom: 2px solid #eee; display: flex;
             justify-content: space-between; align-items: center;
             background: #f9f9f9; border-radius: 8px 8px 0 0;
         }
-        .modal-title { font-size: 1.2rem; font-weight: 700; }
-        .close-btn { background: transparent; border: none; font-size: 2rem; line-height: 1; color: #888; cursor: pointer; }
+        .close-btn { background: transparent; border: none; font-size: 2rem; color: #888; cursor: pointer; }
         .modal-list { overflow-y: auto; padding: 10px; }
         .list-item {
             display: block; width: 100%; text-align: left; padding: 15px 20px;
             background: transparent; border: none; border-bottom: 1px solid #eee;
             color: #333; font-size: 1.1rem; font-weight: 500; cursor: pointer;
         }
-        .list-item:hover { background: #f0f0f0; color: black; }
-        .list-item:last-child { border-bottom: none; }
 
-        /* --- SPINNER --- */
-        .spinner {
-            border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #fff;
-            border-radius: 50%; width: 20px; height: 20px;
-            animation: spin 1s linear infinite; display: none;
-            position: absolute; top: 25px; right: 140px;
-        }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        /* --- RESPONSIVE --- */
         @media (max-width: 600px) {
             header { height: 60px; padding: 0 15px; }
             .brand { display: none; } 
             .station-display { font-size: 1.1rem; text-align: left; }
-            .station-display span { font-size: 0.6rem; }
-            .train-row { height: auto; padding-bottom: 15px; }
-            .line-bubble { width: 45px; height: 45px; font-size: 1.4rem; margin-right: 12px; }
             .destination { font-size: 1.6rem; }
             .minutes-main { font-size: 1.6rem; }
-            .minutes-box { min-width: 70px; }
-            .controls { width: auto; }
-            button.nav-btn { padding: 6px 10px; font-size: 0.8rem; }
-            .spinner { right: 120px; top: 20px; }
+            .minutes-box { min-width: 80px; }
         }
     </style>
 </head>
@@ -185,11 +152,9 @@
         <div style="text-align:center; padding: 50px; opacity: 0.5; font-size: 1.5rem;">Loading Schedule...</div>
     </main>
 
-    <div id="toast">Found Nearest Station</div>
-
-    <svg id="theme-toggle" viewBox="0 0 24 24" fill="currentColor" onclick="toggleTheme()">
-        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z" />
-    </svg>
+    <div id="theme-toggle" onclick="toggleTheme()">
+        <span id="theme-icon" style="font-size: 24px;">🌙</span>
+    </div>
 
     <div class="modal-overlay" id="stationModal">
         <div class="modal-content">
@@ -218,118 +183,22 @@
     </div>
 
     <script>
-        // --- STATION COORDINATES (LAT, LON) ---
-        const STATION_COORDS = {
-            "AIRPORT": {lat: 33.6407, lon: -84.4440},
-            "ARTS CENTER": {lat: 33.7893, lon: -84.3872},
-            "ASHBY": {lat: 33.7563, lon: -84.4173},
-            "AVONDALE": {lat: 33.7753, lon: -84.2822},
-            "BANKHEAD": {lat: 33.7719, lon: -84.4253},
-            "BROOKHAVEN": {lat: 33.8601, lon: -84.3392},
-            "BUCKHEAD": {lat: 33.8484, lon: -84.3683},
-            "CHAMBLEE": {lat: 33.8868, lon: -84.3075},
-            "CIVIC CENTER": {lat: 33.7663, lon: -84.3872},
-            "COLLEGE PARK": {lat: 33.6517, lon: -84.4488},
-            "DECATUR": {lat: 33.7747, lon: -84.2956},
-            "DORAVILLE": {lat: 33.9020, lon: -84.2804},
-            "DUNWOODY": {lat: 33.9212, lon: -84.3444},
-            "EAST LAKE": {lat: 33.7651, lon: -84.3126},
-            "EAST POINT": {lat: 33.6766, lon: -84.4405},
-            "EDGEWOOD CANDLER PARK": {lat: 33.7620, lon: -84.3396},
-            "FIVE POINTS": {lat: 33.7538, lon: -84.3915},
-            "GARNETT": {lat: 33.7478, lon: -84.3965},
-            "GEORGIA STATE": {lat: 33.7497, lon: -84.3857},
-            "GOLD DOME": {lat: 33.7497, lon: -84.3857}, // Same as GA State generally
-            "HAMILTON E HOLMES": {lat: 33.7545, lon: -84.4693},
-            "INDIAN CREEK": {lat: 33.7698, lon: -84.2293},
-            "INMAN PARK": {lat: 33.7575, lon: -84.3527},
-            "KENSINGTON": {lat: 33.7727, lon: -84.2519},
-            "KING MEMORIAL": {lat: 33.7499, lon: -84.3757},
-            "LAKEWOOD": {lat: 33.7004, lon: -84.4289},
-            "LENOX": {lat: 33.8471, lon: -84.3563},
-            "LINDBERGH": {lat: 33.8219, lon: -84.3674},
-            "MEDICAL CENTER": {lat: 33.9106, lon: -84.3514},
-            "MIDTOWN": {lat: 33.7811, lon: -84.3863},
-            "NORTH AVENUE": {lat: 33.7717, lon: -84.3870},
-            "NORTH SPRINGS": {lat: 33.9442, lon: -84.3525},
-            "OAKLAND CITY": {lat: 33.7168, lon: -84.4253},
-            "PEACHTREE CENTER": {lat: 33.7595, lon: -84.3876},
-            "SANDY SPRINGS": {lat: 33.9330, lon: -84.3517},
-            "VINE CITY": {lat: 33.7566, lon: -84.4043},
-            "WEST END": {lat: 33.7360, lon: -84.4136},
-            "WEST LAKE": {lat: 33.7533, lon: -84.4453}
-        };
-
-        // --- APP STATE ---
         let currentStation = "{{ initial_station }}";
         let activeFilter = "ALL";
         let trainData = [];
-        let locationOverridden = false; // Prevents auto-locate after manual pick
 
-        // --- DOM ---
         const container = document.getElementById('trainContainer');
         const headerText = document.getElementById('headerStationText');
-        const spinner = document.getElementById('loadingSpinner');
-        const filterListContainer = document.getElementById('filterListContainer');
+        const themeIcon = document.getElementById('theme-icon');
 
-        // --- INIT ---
         document.addEventListener('DOMContentLoaded', () => {
-            fetchTrains(); // Load default first
+            fetchTrains();
             setInterval(fetchTrains, 15000);
             updateHeader();
-            
-            // Try Auto-Location
-            attemptGeolocation();
+            initTheme();
         });
 
-        // --- GEOLOCATION LOGIC ---
-        function attemptGeolocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(position => {
-                    if (locationOverridden) return; // User already picked manually
-                    
-                    const closest = findNearestStation(position.coords.latitude, position.coords.longitude);
-                    
-                    // Only switch if different from current
-                    if (closest && closest !== currentStation) {
-                        showToast(`📍 Found nearest: ${titleCase(closest)}`);
-                        changeStation(closest, false); // false = not a manual override
-                    }
-                }, error => {
-                    console.log("Geo permission denied or error:", error);
-                });
-            }
-        }
-
-        function findNearestStation(lat, lon) {
-            let minDist = Infinity;
-            let nearest = null;
-
-            for (const [station, coords] of Object.entries(STATION_COORDS)) {
-                const d = getDist(lat, lon, coords.lat, coords.lon);
-                if (d < minDist) {
-                    minDist = d;
-                    nearest = station;
-                }
-            }
-            return nearest;
-        }
-
-        // Haversine formula for distance in km
-        function getDist(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Radius of earth in km
-            const dLat = deg2rad(lat2 - lat1);
-            const dLon = deg2rad(lon2 - lon1);
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-        function deg2rad(deg) { return deg * (Math.PI/180); }
-
-        // --- MAIN FETCH ---
         async function fetchTrains() {
-            spinner.style.display = 'block';
             try {
                 const response = await fetch(`/api/arrivals?station=${currentStation}`);
                 const data = await response.json();
@@ -338,30 +207,7 @@
                 renderTrains();
             } catch (err) {
                 console.error("Fetch error", err);
-                container.innerHTML = `<div style="text-align:center; padding: 50px; opacity:0.5; font-size: 1.5rem;">Connection Error</div>`;
-            } finally {
-                spinner.style.display = 'none';
             }
-        }
-
-        function rebuildFilterMenu() {
-            const destinations = new Set(trainData.map(t => t.destination));
-            const sortedDest = Array.from(destinations).sort();
-            filterListContainer.innerHTML = '';
-            
-            const allBtn = document.createElement('button');
-            allBtn.className = 'list-item';
-            allBtn.innerText = 'Show All';
-            allBtn.onclick = () => setFilter('ALL');
-            filterListContainer.appendChild(allBtn);
-
-            sortedDest.forEach(dest => {
-                const btn = document.createElement('button');
-                btn.className = 'list-item';
-                btn.innerText = dest;
-                btn.onclick = () => setFilter(dest);
-                filterListContainer.appendChild(btn);
-            });
         }
 
         function renderTrains() {
@@ -369,22 +215,27 @@
             const visibleTrains = trainData.filter(t => activeFilter === "ALL" || t.destination === activeFilter);
 
             if (visibleTrains.length === 0) {
-                container.innerHTML = `<div style="text-align:center; padding: 50px; opacity:0.5; font-size: 1.5rem;">Loading, or no trains currently found.</div>`;
+                container.innerHTML = `<div style="text-align:center; padding: 50px; opacity:0.5; font-size: 1.5rem;">No trains found.</div>`;
                 return;
             }
 
             visibleTrains.forEach(t => {
                 const row = document.createElement('div');
-                row.className = `train-row ${t.status === 'Scheduled' ? 'status-sched' : 'status-real'}`;
+                row.className = `train-row`;
                 
                 let mainTime = t.waiting_time;
                 let subLabel = "MIN";
-                if (t.status === 'Scheduled') {
-                    mainTime = t.waiting_time.replace(' min', ''); subLabel = "SCHED";
-                } else if (mainTime === "Arriving") {
-                    mainTime = "ARR"; subLabel = "";
+
+                // Updated logic for Arriving, Boarding, and Departing
+                if (mainTime === "Arriving") {
+                    mainTime = "ARR"; 
+                    subLabel = "BOARDING";
                 } else if (mainTime === "Boarding") {
-                    mainTime = "BRD"; subLabel = "";
+                    mainTime = "BRD"; 
+                    subLabel = "DEPARTING";
+                } else if (mainTime === "0") {
+                    mainTime = "BRD";
+                    subLabel = "DEPARTING";
                 } else {
                     mainTime = mainTime.replace(' min', '');
                 }
@@ -404,50 +255,40 @@
         }
 
         function changeStation(newStation, isManual) {
-            if (isManual) {
-                locationOverridden = true; // Stop auto-locate from changing it back
-            }
             currentStation = newStation;
             activeFilter = 'ALL';
             closeModal('stationModal');
             updateHeader();
-            container.innerHTML = `<div style="text-align:center; padding: 50px; opacity:0.5; font-size: 1.5rem;">Loading...</div>`;
             fetchTrains();
         }
 
         function setFilter(val) { activeFilter = val; closeModal('filterModal'); renderTrains(); }
         
         function updateHeader() {
-            const display = titleCase(currentStation.replace(/ STATION/i, '').replace(/STATION/i, ''));
+            const display = currentStation.replace(/ STATION/i, '');
             headerText.innerHTML = `<span>ARRIVING AT</span>${display}`;
         }
 
-        function titleCase(str) {
-            return str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        }
-
-        // --- UI UTILS ---
-        function showToast(msg) {
-            const t = document.getElementById("toast");
-            t.className = "show";
-            t.innerText = msg;
-            setTimeout(() => { t.className = t.className.replace("show", ""); }, 3000);
+        /* --- THEME LOGIC --- */
+        function initTheme() {
+            const savedTheme = localStorage.getItem('marta_theme');
+            if (savedTheme === 'light') {
+                document.body.classList.remove('dark-mode');
+                themeIcon.innerText = '☀️';
+            } else {
+                document.body.classList.add('dark-mode');
+                themeIcon.innerText = '🌙';
+            }
         }
 
         function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
-            const isDark = document.body.classList.contains('dark-mode');
+            const isDark = document.body.classList.toggle('dark-mode');
             localStorage.setItem('marta_theme', isDark ? 'dark' : 'light');
+            themeIcon.innerText = isDark ? '🌙' : '☀️';
         }
-        // Load saved theme
-        const savedTheme = localStorage.getItem('marta_theme');
-        if (savedTheme === 'light') document.body.classList.remove('dark-mode');
-        else document.body.classList.add('dark-mode');
 
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-        window.onclick = function(e) { if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('active'); }
     </script>
 </body>
-
 </html>
