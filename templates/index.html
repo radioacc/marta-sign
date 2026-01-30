@@ -3,43 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MARTA Trains</title>
+    <title>Live Train Tracker</title>
     <style>
-        /* (Styles omitted for brevity, same as previous dark mode/layout) */
-        #theme-toggle {
-            position: fixed; bottom: 15px; right: 15px; width: 40px; height: 40px;
-            cursor: pointer; z-index: 200; display: flex; align-items: center; justify-content: center;
-            background: rgba(0,0,0,0.1); border-radius: 50%;
-        }
+        /* CSS resets and layout same as original */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #fff; color: #000; height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s; }
+        body.dark-mode { background-color: #121212; color: #e0e0e0; }
+        header { background-color: #000; color: #fff; height: 70px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0; }
+        body.dark-mode header { background-color: #1f1f1f; border-bottom: 1px solid #333; }
+        .station-display { font-size: 1.5rem; font-weight: 700; text-align: center; flex-grow: 1; }
+        .station-display span { display: block; font-size: 0.7rem; color: #ccc; }
+        main { flex-grow: 1; overflow-y: auto; padding: 20px; }
+        .train-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+        body.dark-mode .train-row { border-bottom: 1px solid #333; }
+        .line-bubble { width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; font-weight: bold; color: #fff; margin-right: 15px; }
+        .RED { background-color: #ED1C24; } .GOLD { background-color: #FFA500; } .BLUE { background-color: #009DDC; } .GREEN { background-color: #69BE28; }
+        .destination { font-size: 1.8rem; font-weight: 700; }
+        .minutes-box { text-align: right; min-width: 100px; }
+        .minutes-main { font-size: 2rem; font-weight: 700; }
+        .minutes-sub { font-size: 0.8rem; color: #666; text-transform: uppercase; }
+        #theme-toggle { position: fixed; bottom: 20px; right: 20px; cursor: pointer; font-size: 2rem; z-index: 1000; opacity: 0.6; }
+        #theme-toggle:hover { opacity: 1; }
+        button.nav-btn { background-color: #333; color: #fff; border: 1px solid #555; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 2000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: #fff; width: 90%; max-width: 400px; max-height: 70vh; overflow-y: auto; border-radius: 8px; color: #000; padding: 20px; }
+        .list-item { display: block; width: 100%; padding: 10px; text-align: left; border-bottom: 1px solid #eee; background: none; border-left: none; border-right: none; cursor: pointer; }
     </style>
 </head>
 <body class="dark-mode">
+
     <header>
-        <div class="brand">TRAINS</div>
-        <div class="station-display" id="headerStationText">
+        <div style="width: 80px;"></div>
+        <div class="station-display" id="headerText">
             <span>ARRIVING AT</span>
             FETCHING TRAIN DATA...
         </div>
         <div class="controls">
-            <button class="nav-btn" onclick="openModal('stationModal')">STATION</button>
+            <button class="nav-btn" onclick="openModal()">STATION</button>
         </div>
     </header>
 
-    <main id="trainContainer">
-        <div style="text-align:center; padding: 50px; opacity: 0.5; font-size: 1.5rem;">Fetching Train Data...</div>
+    <main id="container">
+        <div style="text-align:center; padding: 50px; opacity: 0.5; font-size: 1.2rem;">Fetching Train Data...</div>
     </main>
 
-    <div id="theme-toggle" onclick="toggleTheme()">
-        <span id="theme-icon" style="font-size: 24px;">🌙</span>
+    <div id="theme-toggle" onclick="toggleTheme()">🌙</div>
+
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom:15px;">Select Station</h3>
+            {% for s in stations %}
+            <button class="list-item" onclick="changeStation('{{ s }}')">{{ s|title }}</button>
+            {% endfor %}
+            <button class="nav-btn" style="width:100%; margin-top:15px;" onclick="closeModal()">Close</button>
+        </div>
     </div>
 
     <script>
-        // ... (changeStation and fetch logic)
-        function updateHeader() {
-            const display = currentStation.replace(/ STATION/i, '');
-            // Updated loading text
-            headerText.innerHTML = `<span>ARRIVING AT</span>${display || "FETCHING TRAIN DATA..."}`;
+        let currentStation = "{{ initial_station }}";
+        const container = document.getElementById('container');
+        const headerText = document.getElementById('headerText');
+        const themeBtn = document.getElementById('theme-toggle');
+
+        async function fetchTrains() {
+            try {
+                const res = await fetch(`/api/arrivals?station=${currentStation}`);
+                const data = await res.json();
+                render(data);
+            } catch (e) {
+                container.innerHTML = '<div style="text-align:center; padding:50px;">Connection Error</div>';
+            }
         }
+
+        function render(trains) {
+            container.innerHTML = '';
+            if (trains.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:50px;">No trains found</div>';
+                return;
+            }
+
+            trains.forEach(t => {
+                let main = t.waiting_time;
+                let sub = "MIN";
+                
+                // Status Logic: Arriving -> Boarding -> Departing
+                if (main === "Arriving" || main === "0") {
+                    main = "ARR"; sub = "BOARDING";
+                } else if (main === "Boarding") {
+                    main = "BRD"; sub = "DEPARTING";
+                } else if (parseInt(main) < 1) {
+                    main = "DEP"; sub = "DEPARTING";
+                } else {
+                    main = main.replace(' min', '');
+                }
+
+                container.innerHTML += `
+                    <div class="train-row">
+                        <div class="line-bubble ${t.line}">${t.direction}</div>
+                        <div style="flex-grow:1;"><div class="destination">${t.destination}</div></div>
+                        <div class="minutes-box">
+                            <div class="minutes-main">${main}</div>
+                            <div class="minutes-sub">${sub}</div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            themeBtn.innerText = isDark ? '🌙' : '☀️';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        function changeStation(s) {
+            currentStation = s;
+            headerText.innerHTML = `<span>ARRIVING AT</span>${s}`;
+            closeModal();
+            container.innerHTML = '<div style="text-align:center; padding:50px;">Fetching Train Data...</div>';
+            fetchTrains();
+        }
+
+        function openModal() { document.getElementById('modal').classList.add('active'); }
+        function closeModal() { document.getElementById('modal').classList.remove('active'); }
+
+        // Initial Load
+        const saved = localStorage.getItem('theme');
+        if (saved === 'light') { document.body.classList.remove('dark-mode'); themeBtn.innerText = '☀️'; }
+        fetchTrains();
+        setInterval(fetchTrains, 15000);
     </script>
 </body>
 </html>
