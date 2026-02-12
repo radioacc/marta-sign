@@ -17,6 +17,7 @@ HEADERS = {
 }
 
 # --- CACHE ---
+CACHE = 1
 CACHE = {'all_trains': [], 'last_updated': None}
 CACHE_DURATION = 15
 
@@ -324,4 +325,5 @@ if __name__ == '__main__':
     from waitress import serve
     port = int(os.environ.get("PORT", 10000))
     print(f"🚀 Serving on http://0.0.0.0:{port}")
+
     serve(app, host='0.0.0.0', port=port)
